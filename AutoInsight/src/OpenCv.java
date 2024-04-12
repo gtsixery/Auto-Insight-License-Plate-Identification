@@ -9,70 +9,137 @@ import java.util.Collections;
 import java.util.List;
 
 
+//references
+//https://docs.gimp.org/2.6/en/gimp-tool-desaturate.html
+
 public class OpenCv {
 
 
     public static void main(String[] args) {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\BYE-NOW-3816943373.jpg");
+        Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\BYE-NOW-3816943373.jpg");
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\vfec56pp6rf51-1386706553.jpg");
-        Mat image = Imgcodecs.imread("/Users/jr/Downloads/IMG_7066.Jpeg");
+        //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\maxresdefault-1911473101.jpg");
+        //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\CameraPlate.jpg");
 
+
+        HighGui.imshow("og", image);
         //convert image to grayscale
-        //Mat gray = new Mat();
-        //Imgproc.cvtColor(image, gray, Imgproc.COLOR_BGR2GRAY);
-        //HighGui.imshow("grayscale", gray);
-
-        //apply a threshold value to get binary image
-        //Mat binary = new Mat();
-        //Imgproc.threshold(gray, binary, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
-        //HighGui.imshow("binary", binary);
-
-        final Mat processed = processImage(image);
-        HighGui.imshow("process", processed);
-        //Mat linesImage = findRectangle(processed);
-        //HighGui.imshow("find rect", linesImage);
+        //Mat gray = processImage(image);
+        Mat gray = GaussianBlur(image, 7, 1);
+        HighGui.imshow("processed", gray);
         HighGui.waitKey();
-        /*
-        //find contours in image
-        List<MatOfPoint> contours = new ArrayList<>();
-        Imgproc.findContours(binary, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+    }
 
-        //iterate
+    public static Mat convertGrayScale(final Mat img) {
+        if(img.empty()){
+            System.err.println("Input image is null");
+            return img;
+        }
 
-        for(MatOfPoint contour : contours) {
-            MatOfPoint2f curve = new MatOfPoint2f(contour.toArray());
-            MatOfPoint2f approx = new MatOfPoint2f();
-            Imgproc.approxPolyDP(curve, approx, Imgproc.arcLength(curve, true) * 0.02, true);
+        Mat convertedImage = new Mat(img.rows(), img.cols(), CvType.CV_8UC1);
+        int width = img.width();
+        int height = img.height();
 
-            if(approx.total() == 4) {
-                System.out.println("found rectangle");
-                Imgproc.drawContours(image, Collections.singletonList(contour), -1, new Scalar(0, 255, 0), 2);
-                //display
+        for(int i = 0; i < width; i++){
+            for(int j = 0; j < height; j++){
+                //pixel color values
+                double[] rgbVal = img.get(j, i);
 
+                // Check if the retrieved pixel values are null or empty
+                if (rgbVal == null || rgbVal.length < 3) {
+                    System.err.println("Invalid pixel values at position (" + j + ", " + i + ").");
+                    continue; // Skip this pixel and continue with the next one
+                }
+                //luminosity method
+                int red = (int) rgbVal[0];
+                int blue = (int) rgbVal[1];
+                int green = (int) rgbVal[2];
+
+                double newVal = (0.21 * red) + (0.72 * green) + (0.07 * blue);
+                convertedImage.put(j, i, newVal);
             }
         }
-        HighGui.imshow("result", image);
-        HighGui.waitKey();
-         */
+        return convertedImage;
     }
+
+    public static Mat GaussianBlur(Mat img, int kernalSize, double sigma){
+        Mat blurredImage = new Mat(img.size(), CvType.CV_8UC3);
+        int padding = kernalSize / 2;
+
+        //make kernal
+        double[][] kernal = createGaussianKernal(kernalSize, sigma);
+
+        //apply kernal to every pixel
+        for(int y = padding; y < img.rows() - padding; y++){
+            for(int x = padding; x < img.cols() - padding; x++){
+                double[] pixel = applyKernal(img, x, y, kernal, kernalSize);
+                blurredImage.put(y, x, pixel);
+            }
+        }
+
+        return blurredImage;
+    }
+
+    public static double[][] createGaussianKernal(int size, double sigma){
+        double[][] kernel = new double[size][size];
+        double sum = 0;
+
+        for(int x = -size / 2; x <= size / 2; x++) {
+            for(int y = -size / 2; y <= size / 2; y++) {
+                double exponent = -(x * x + y * y) / (2 * sigma * sigma);
+                kernel[x + size / 2][y + size / 2] = Math.exp(exponent) / (2 * Math.PI * sigma * sigma);
+                sum += kernel[x + size / 2][y + size / 2];
+            }
+        }
+
+        //normalize kernel
+        for(int i = 0; i < size; i++) {
+            for(int j = 0; j < size; j++) {
+                kernel[i][j] /= sum;
+            }
+        }
+
+        return kernel;
+    }
+
+    public static double[] applyKernal(Mat img, int x, int y, double[][] kernel, int kernelSize){
+        int padding = kernelSize / 2;
+        double[] pixel = new double[3];
+
+        for(int i = -padding; i <= padding; i++) {
+            for(int j = -padding; j <= padding; j++) {
+                double[] sourcePixel = img.get(y + i, x + j);
+                double kernelValue = kernel[i + padding][j + padding];
+                for(int k = 0; k < 3; k++) {
+                    pixel[k] += sourcePixel[k] * kernelValue;
+                }
+            }
+        }
+        return pixel;
+    }
+
 
     public static Mat processImage(Mat mat){
         final Mat processedImg = new Mat(mat.height(), mat.width(), mat.type());
         //blur
-        Imgproc.GaussianBlur(mat, processedImg, new Size(7, 7), 1);
+        Mat blurimg = GaussianBlur(mat, 7, 1);
+        HighGui.imshow("blurred", blurimg);
 
         //convert to grayscale
-        Imgproc.cvtColor(processedImg, processedImg, Imgproc.COLOR_RGB2GRAY);
+        Mat grayscaleimg = convertGrayScale(blurimg);
+        HighGui.imshow("grayscale", grayscaleimg);
 
         //apply thresholding
         //Imgproc.threshold(processedImg, processedImg, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
 
         //find edges
-        Imgproc.Canny(processedImg, processedImg, 270, 25);
-
+        Mat edgeimg = new Mat(mat.height(), mat.width(), mat.type());
+        Imgproc.Canny(grayscaleimg, edgeimg, 270, 25);
+        HighGui.imshow("edge", edgeimg);
         //dilate
-        Imgproc.dilate(processedImg, processedImg, new Mat(), new Point(1, 1), 1);
+        Imgproc.dilate(edgeimg, processedImg, new Mat(), new Point(1, 1), 1);
+        HighGui.imshow("dilated", processedImg);
         return processedImg;
     }
 
@@ -127,6 +194,9 @@ public class OpenCv {
 
             Imgproc.line(result, pt1, pt2, new Scalar(0, 0, 255), 5);
         }
+
+        //find rectangles from lines
+
         return result;
     }
 
