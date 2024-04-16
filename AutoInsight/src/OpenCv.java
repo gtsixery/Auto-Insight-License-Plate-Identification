@@ -23,10 +23,8 @@ public class OpenCv {
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\CameraPlate.jpg");
 
 
-        HighGui.imshow("og", image);
-        //convert image to grayscale
-        //Mat gray = processImage(image);
-        Mat gray = GaussianBlur(image, 7, 1);
+        //HighGui.imshow("og", image);
+        Mat gray = processImage(image);
         HighGui.imshow("processed", gray);
         HighGui.waitKey();
     }
@@ -121,14 +119,14 @@ public class OpenCv {
 
 
     public static Mat processImage(Mat mat){
-        final Mat processedImg = new Mat(mat.height(), mat.width(), mat.type());
+        Mat processedImg = new Mat(mat.height(), mat.width(), mat.type());
         //blur
-        Mat blurimg = GaussianBlur(mat, 7, 1);
-        HighGui.imshow("blurred", blurimg);
+        Mat blurimg = GaussianBlur(mat, 5, 1.5);
+        //HighGui.imshow("blurred", blurimg);
 
         //convert to grayscale
         Mat grayscaleimg = convertGrayScale(blurimg);
-        HighGui.imshow("grayscale", grayscaleimg);
+        //HighGui.imshow("grayscale", grayscaleimg);
 
         //apply thresholding
         //Imgproc.threshold(processedImg, processedImg, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
@@ -138,14 +136,19 @@ public class OpenCv {
         Imgproc.Canny(grayscaleimg, edgeimg, 270, 25);
         HighGui.imshow("edge", edgeimg);
         //dilate
-        Imgproc.dilate(edgeimg, processedImg, new Mat(), new Point(1, 1), 1);
-        HighGui.imshow("dilated", processedImg);
+        //Imgproc.dilate(edgeimg, processedImg, new Mat(), new Point(1, 1), 1);
+        //HighGui.imshow("dilated", processedImg);
+
+        //find rectangles
+        processedImg = findRectangle(edgeimg);
+
+        //HighGui.imshow("contours", processedImg);
         return processedImg;
     }
 
     public static Mat findRectangle(Mat mat) {
         List<MatOfPoint> contours = new ArrayList<>();
-        Mat image32S = new Mat();
+        Mat image32S = mat.clone();
         mat.convertTo(image32S, CvType.CV_32SC1);
         //Imgproc.findContours(mat, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
         Imgproc.findContours(image32S, contours, new Mat(), Imgproc.RETR_FLOODFILL, Imgproc.CHAIN_APPROX_SIMPLE);
@@ -153,7 +156,9 @@ public class OpenCv {
         System.out.println(contours.size());
         Mat result = mat.clone();
 
-        for(MatOfPoint contour : contours) {
+        for(int i = 0; i < contours.size(); i++) {
+            MatOfPoint contour = contours.get(i);
+
             //Approximates contour with a polygon
             MatOfPoint2f approxCurve = new MatOfPoint2f();
             MatOfPoint2f cnt = new MatOfPoint2f(contour.toArray());
@@ -166,36 +171,10 @@ public class OpenCv {
 
             //Check if point has 4 vertices i.e. is a rectangle
             if(points.rows() == 4) {
-                Imgproc.drawContours(result, Collections.singletonList(points), contours.indexOf(contour), new Scalar(0, 0, 255), 2);
+                Imgproc.drawContours(result, contours, i, new Scalar(0, 255, 0, 1), 2);
                 System.out.println("Drawing rect");
             }
         }
-
-
-        return result;
-    }
-
-    public static Mat findLines(Mat img) {
-        Mat lines = new Mat();
-        Imgproc.HoughLines(img, lines, 0.5, Math.PI / 180, 220, 1, 2);
-
-        //draw lines
-        Mat result = img.clone();
-        for (int i = 0; i < lines.rows(); i++) {
-            double rho = lines.get(i, 0)[0];
-            double theta = lines.get(i, 0)[1];
-            //System.out.println("Line " + i + ": rho=" + rho + ", theta=" + theta); // Debugging output
-            double a = Math.cos(theta);
-            double b = Math.sin(theta);
-            double x0 = a * rho;
-            double y0 = b * rho;
-            Point pt1 = new Point(Math.round(x0 + 1000 * (-b)), Math.round(y0 + 1000 * (a)));
-            Point pt2 = new Point(Math.round(x0 - 1000 * (-b)), Math.round(y0 - 1000 * (a)));
-
-            Imgproc.line(result, pt1, pt2, new Scalar(0, 0, 255), 5);
-        }
-
-        //find rectangles from lines
 
         return result;
     }
