@@ -17,7 +17,7 @@ public class OpenCv {
 
     public static void main(String[] args) {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\BYE-NOW-3816943373.jpg");
+        Mat image = Imgcodecs.imread("C:\\Users\\germa\\OneDrive\\Desktop\\CSC474- Image Proccessing\\Images\\test1.jpg");
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\vfec56pp6rf51-1386706553.jpg");
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\maxresdefault-1911473101.jpg");
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\CameraPlate.jpg");
