@@ -8,6 +8,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import java.awt.Graphics2D;
+import net.sourceforge.tess4j.*;
+import java.awt.Image;
+import java.awt.image.*;
+import java.io.*;
+
+import javax.imageio.ImageIO;
 
 //references
 //https://docs.gimp.org/2.6/en/gimp-tool-desaturate.html
@@ -180,3 +187,4 @@ public class OpenCv {
     }
 
 }
+
