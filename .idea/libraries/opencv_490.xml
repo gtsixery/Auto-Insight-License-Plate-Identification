@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="opencv-490">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/AutoInsight/opencv-490.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

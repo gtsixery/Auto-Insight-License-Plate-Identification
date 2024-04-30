@@ -1,12 +1,10 @@
-import net.sourceforge.tess4j.Tesseract;
-import net.sourceforge.tess4j.TesseractException;
+import java.awt.Graphics2D;
+import net.sourceforge.tess4j.*;
+import java.awt.Image;
+import java.awt.image.*;
+import java.io.*;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.awt.image.RescaleOp;
-import java.io.File;
-import java.io.IOException;
 
 public class ScanedImage {
 
@@ -50,13 +48,13 @@ public class ScanedImage {
         ImageIO
                 .write(fopimage,
                         "jpg",
-                        new File("D:\\Tess4J\\Testing and learning\\output.png"));
+                        new File("Images/Output Images/output_preprocessed_image.jpg"));
 
         // Instantiating the Tesseract class
         // which is used to perform OCR
         Tesseract it = new Tesseract();
 
-        it.setDatapath("D:\\Program Files\\Workspace\\Tess4J");
+        it.setDatapath("Tess4J/tessdata");
 
         // doing OCR on the image
         // and storing result in string str
@@ -67,7 +65,8 @@ public class ScanedImage {
     public static void main(String args[]) throws Exception
     {
         File f
-                = new File("");
+                = new File(
+                "Images/Output Images/output_preprocessed_image.jpg");
 
         BufferedImage ipimage = ImageIO.read(f);
 
@@ -97,6 +96,9 @@ public class ScanedImage {
         }
         else if (d >= -1 && d < 2) {
             processImg(ipimage, 1f, 0.35f);
+
         }
+    
     }
+
 }

@@ -18,22 +18,23 @@ import javax.imageio.ImageIO;
 
 //references
 //https://docs.gimp.org/2.6/en/gimp-tool-desaturate.html
-
+/*
 public class OpenCv {
 
 
     public static void main(String[] args) {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        Mat image = Imgcodecs.imread("C:\\Users\\germa\\OneDrive\\Desktop\\CSC474- Image Proccessing\\Images\\test1.jpg");
+        Mat image = Imgcodecs.imread("Images/TessTest.png");
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\vfec56pp6rf51-1386706553.jpg");
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\maxresdefault-1911473101.jpg");
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\CameraPlate.jpg");
 
 
-        //HighGui.imshow("og", image);
+        HighGui.imshow("og", image);
         Mat gray = processImage(image);
         HighGui.imshow("processed", gray);
         HighGui.waitKey();
+        System.exit(0);
     }
 
     public static Mat convertGrayScale(final Mat img) {
@@ -184,7 +185,84 @@ public class OpenCv {
         }
 
         return result;
+
     }
 
 }
 
+*/
+import org.opencv.core.Core;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Size;
+import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
+
+public class OpenCv {
+
+    static {
+        // Load the OpenCV native library
+        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+    }
+
+    public static Mat preprocessImage(String imagePath) {
+        // Read the image
+        Mat image = Imgcodecs.imread(imagePath);
+
+        // Convert to grayscale
+        Mat gray = new Mat();
+        Imgproc.cvtColor(image, gray, Imgproc.COLOR_BGR2GRAY);
+
+        // Apply Gaussian blur to remove noise
+        Mat blur = new Mat();
+        Imgproc.GaussianBlur(gray, blur, new Size(5, 5), 0);
+
+        // Adaptive thresholding
+        Mat thresh = new Mat();
+        Imgproc.adaptiveThreshold(blur, thresh, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C,
+                Imgproc.THRESH_BINARY_INV, 11, 2);
+
+        // Morphological operation to close gaps between letters
+        Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3, 3));
+        Mat closing = new Mat();
+        Imgproc.morphologyEx(thresh, closing, Imgproc.MORPH_CLOSE, kernel);
+
+        // Dilation to strengthen the characters
+        Mat dilated = new Mat();
+        Imgproc.dilate(closing, dilated, kernel);
+
+        return dilated;
+    }
+
+    public static void main(String[] args) {
+
+        // Now you can use `preprocessedImage` with Tesseract OCR
+
+        String folderPath = "AutoInsight/src/Images";
+        File Folder = new File(folderPath);
+        String outputPath = "AutoInsight/src/Output_Images";
+        FilenameFilter imageFilter = new FilenameFilter() {
+            public boolean accept(File dir, String name) {
+                // You can modify this condition to match your desired image file extensions
+                return name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".jpeg");
+            }
+        };
+        //store files to File Array
+        File[] imageFiles = Folder.listFiles(imageFilter);
+
+        int counter = 0; // keep File Count
+        while( counter < imageFiles.length ) {
+            String imageFile = imageFiles[counter].getAbsolutePath();
+            //Process with tesseract
+            Mat image = preprocessImage(imageFile);
+            //Save File to Output Folder
+            Imgcodecs.imwrite(STR."AutoInsight/src/Output_Images/Preprocessed_Image \{counter} .jpg", image);
+            System.out.println(STR."Processed image saved as Preprocessed_Image \{counter} .jpg");
+            counter++;
+        }
+
+        // Save the processed image to file
+
+
+    }
+}
