@@ -24,17 +24,16 @@ public class OpenCv {
 
     public static void main(String[] args) {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        Mat image = Imgcodecs.imread("Images/TessTest.png");
+        Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\BYE-NOW-3816943373.jpg");
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\vfec56pp6rf51-1386706553.jpg");
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\maxresdefault-1911473101.jpg");
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\CameraPlate.jpg");
 
 
-        HighGui.imshow("og", image);
+        //HighGui.imshow("og", image);
         Mat gray = processImage(image);
         HighGui.imshow("processed", gray);
         HighGui.waitKey();
-        System.exit(0);
     }
 
     public static Mat convertGrayScale(final Mat img) {
@@ -142,14 +141,16 @@ public class OpenCv {
         //find edges
         Mat edgeimg = new Mat(mat.height(), mat.width(), mat.type());
         Imgproc.Canny(grayscaleimg, edgeimg, 270, 25);
-        HighGui.imshow("edge", edgeimg);
+
         //dilate
         //Imgproc.dilate(edgeimg, processedImg, new Mat(), new Point(1, 1), 1);
         //HighGui.imshow("dilated", processedImg);
 
         //find rectangles
         processedImg = findRectangle(edgeimg);
-
+        //Mat edge2 = new Mat(mat.height(), mat.width(), mat.type());
+        //Imgproc.Canny(processedImg, edge2, 270, 25);
+        //HighGui.imshow("edge2", edge2);
         //HighGui.imshow("contours", processedImg);
         return processedImg;
     }
@@ -164,28 +165,72 @@ public class OpenCv {
         System.out.println(contours.size());
         Mat result = mat.clone();
 
-        for(int i = 0; i < contours.size(); i++) {
-            MatOfPoint contour = contours.get(i);
+        List<MatOfPoint> groupedContours = groupContours(contours);
+        Imgproc.drawContours(result, groupedContours, -1, new Scalar(0, 255, 0), 2);
+        HighGui.imshow("grouped contours", result);
 
-            //Approximates contour with a polygon
-            MatOfPoint2f approxCurve = new MatOfPoint2f();
-            MatOfPoint2f cnt = new MatOfPoint2f(contour.toArray());
-            double epsilon = 0.02 * Imgproc.arcLength(cnt, true);
-            Imgproc.approxPolyDP(cnt, approxCurve, epsilon, true);
+        return result;
+    }
 
-            //Need to convert back to MatOfPoint to count vertices in polygon
-            MatOfPoint points = new MatOfPoint();
-            approxCurve.convertTo(points, CvType.CV_32S);
+    public static List<MatOfPoint> groupContours(List<MatOfPoint> contours) {
+        List<MatOfPoint> groupedContours = new ArrayList<>();
 
-            //Check if point has 4 vertices i.e. is a rectangle
-            if(points.rows() == 4) {
-                Imgproc.drawContours(result, contours, i, new Scalar(0, 255, 0, 1), 2);
-                System.out.println("Drawing rect");
+        // Adjust the tolerances for grouping contours
+        int xTolerance = 3; // Increase the x tolerance
+        int yTolerance = 3; // Increase the y tolerance
+
+        for (int i = 0; i < contours.size(); i++) {
+            MatOfPoint contour1 = contours.get(i);
+
+            // Check if this contour is already grouped
+            boolean isGrouped = false;
+            for (MatOfPoint groupedContour : groupedContours) {
+                if (Imgproc.pointPolygonTest(new MatOfPoint2f(groupedContour.toArray()), new Point(contour1.get(0, 0)), false) >= 0) {
+                    isGrouped = true;
+                    break;
+                }
+            }
+
+            if (!isGrouped) {
+                // Create a bounding rectangle for the current contour
+                Rect boundingRect1 = Imgproc.boundingRect(contour1);
+
+                // Group nearby contours within the adjusted tolerances
+                List<MatOfPoint> group = new ArrayList<>();
+                group.add(contour1);
+
+                // Group contours in the horizontal direction
+                for (int j = i + 1; j < contours.size(); j++) {
+                    MatOfPoint contour2 = contours.get(j);
+                    Rect boundingRect2 = Imgproc.boundingRect(contour2);
+
+                    if (Math.abs(boundingRect1.x - boundingRect2.x) <= xTolerance) {
+                        group.add(contour2);
+                    }
+                }
+
+                // Group contours in the vertical direction
+                for (int j = i + 1; j < contours.size(); j++) {
+                    MatOfPoint contour2 = contours.get(j);
+                    Rect boundingRect2 = Imgproc.boundingRect(contour2);
+
+                    if (Math.abs(boundingRect1.y - boundingRect2.y) <= yTolerance) {
+                        group.add(contour2);
+                    }
+                }
+
+                // Merge the contours in the group
+                MatOfPoint mergedContour = new MatOfPoint();
+                List<Point> mergedPoints = new ArrayList<>();
+                for (MatOfPoint contour : group) {
+                    mergedPoints.addAll(contour.toList());
+                }
+                mergedContour.fromList(mergedPoints);
+                groupedContours.add(mergedContour);
             }
         }
 
-        return result;
-
+        return groupedContours;
     }
 
 }
