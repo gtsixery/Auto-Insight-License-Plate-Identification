@@ -8,29 +8,24 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import java.awt.Graphics2D;
-import net.sourceforge.tess4j.*;
-import java.awt.Image;
-import java.awt.image.*;
-import java.io.*;
-
-import javax.imageio.ImageIO;
 
 //references
 //https://docs.gimp.org/2.6/en/gimp-tool-desaturate.html
-/*
+
 public class OpenCv {
 
 
     public static void main(String[] args) {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\BYE-NOW-3816943373.jpg");
+        //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\BYE-NOW-3816943373.jpg");
+        Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\trucktest.jpg");
+        //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\test4.jpg");
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\vfec56pp6rf51-1386706553.jpg");
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\maxresdefault-1911473101.jpg");
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\CameraPlate.jpg");
 
 
-        //HighGui.imshow("og", image);
+        HighGui.imshow("og", image);
         Mat gray = processImage(image);
         HighGui.imshow("processed", gray);
         HighGui.waitKey();
@@ -140,22 +135,129 @@ public class OpenCv {
 
         //find edges
         Mat edgeimg = new Mat(mat.height(), mat.width(), mat.type());
-        Imgproc.Canny(grayscaleimg, edgeimg, 270, 25);
+        Imgproc.Canny(grayscaleimg, edgeimg, 265, 45);
 
-        //dilate
-        //Imgproc.dilate(edgeimg, processedImg, new Mat(), new Point(1, 1), 1);
-        //HighGui.imshow("dilated", processedImg);
 
         //find rectangles
-        processedImg = findRectangle(edgeimg);
-        //Mat edge2 = new Mat(mat.height(), mat.width(), mat.type());
-        //Imgproc.Canny(processedImg, edge2, 270, 25);
-        //HighGui.imshow("edge2", edge2);
-        //HighGui.imshow("contours", processedImg);
-        return processedImg;
+        processedImg = findContours(edgeimg);
+        Mat closedImg = new Mat();
+        Mat kernal = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(2, 8));
+        Imgproc.morphologyEx(processedImg, closedImg, Imgproc.MORPH_CLOSE, kernal);
+
+        int[] rowRange = MakeVerticalHistogram(closedImg, 150);
+        //int[] colRange = MakeHorizontalHistogram(closedImg, 300);
+
+        //vertical range
+        int cropheight = rowRange[1] - rowRange[0];
+        double bufferheight = closedImg.cols() * 0.2;
+        cropheight = cropheight+(int)bufferheight;
+        double paddingHeight = cropheight * 0.1;
+        if(rowRange[0]+cropheight > closedImg.rows()) {
+            int diff = (rowRange[0]+cropheight) - closedImg.rows();
+            cropheight -= diff;
+        }
+
+        //decided to start the horizontal crop 25% in
+        double cropXStart = closedImg.cols() * 0.25;
+        double cropWidth = closedImg.cols() * 0.5;
+
+        Rect roi = new Rect((int)cropXStart, rowRange[0]+(int)paddingHeight, (int)cropWidth, cropheight - (int)paddingHeight);
+
+        Mat croppedImg = new Mat(mat, roi);
+        return croppedImg;
     }
 
-    public static Mat findRectangle(Mat mat) {
+    public static int[] MakeVerticalHistogram(Mat mat, int buffer) {
+        List<Integer> whitePixelCounts = new ArrayList<>();
+        int[] result = new int[2];
+
+        for(int i = 0; i < mat.rows(); i++) {
+            int pCount = 0;
+
+            for(int j = 0; j < mat.cols(); j++) {
+                double pixelValue = mat.get(i, j)[0];
+                if(pixelValue == 255) {
+                    pCount++;
+                }
+            }
+            whitePixelCounts.add(pCount);
+        }
+
+        // sort by amount of pCount, index = row index
+        for(Integer e : whitePixelCounts) {
+            if(e > whitePixelCounts.get(result[0])) {
+                result[0] = whitePixelCounts.indexOf(e);
+            } else if (e > whitePixelCounts.get(result[1])) {
+                result[1] = whitePixelCounts.indexOf(e);
+            }
+        }
+
+        //sort array
+        int maxIndex = 0;
+        int secondMaxIndex = 0;
+        for (int i = 0; i < whitePixelCounts.size(); i++) {
+            int count = whitePixelCounts.get(i);
+            if (count > whitePixelCounts.get(maxIndex)) {
+                secondMaxIndex = maxIndex;
+                maxIndex = i;
+            } else if (count > whitePixelCounts.get(secondMaxIndex)) {
+                secondMaxIndex = i;
+            }
+        }
+
+
+        result[0] = Math.min(maxIndex, secondMaxIndex);
+        result[1] = Math.max(maxIndex, secondMaxIndex);
+
+        return result;
+    }
+
+    public static int[] MakeHorizontalHistogram(Mat mat, int buffer) {
+        List<Integer> whitePixelCounts = new ArrayList<>();
+        int[] result = new int[2];
+
+        for(int i = 0; i < mat.cols(); i++) {
+            int pCount = 0;
+
+            for(int j = 0; j < mat.rows(); j++) {
+                double pixelValue = mat.get(i, j)[0];
+                if(pixelValue == 255) {
+                    pCount++;
+                }
+            }
+            whitePixelCounts.add(pCount);
+        }
+
+        // sort by amount of pCount, index = row index
+        for(Integer e : whitePixelCounts) {
+            if(e > whitePixelCounts.get(result[0])) {
+                result[0] = whitePixelCounts.indexOf(e);
+            } else if (e > whitePixelCounts.get(result[1])) {
+                result[1] = whitePixelCounts.indexOf(e);
+            }
+        }
+
+        //sort array
+        int maxIndex = 0;
+        int secondMaxIndex = 0;
+        for (int i = 0; i < whitePixelCounts.size(); i++) {
+            int count = whitePixelCounts.get(i);
+            if (count > whitePixelCounts.get(maxIndex)) {
+                secondMaxIndex = maxIndex;
+                maxIndex = i;
+            } else if (count > whitePixelCounts.get(secondMaxIndex)) {
+                secondMaxIndex = i;
+            }
+        }
+
+
+        result[0] = Math.min(maxIndex, secondMaxIndex);
+        result[1] = Math.max(maxIndex, secondMaxIndex);
+
+        return result;
+    }
+
+    public static Mat findContours(Mat mat) {
         List<MatOfPoint> contours = new ArrayList<>();
         Mat image32S = mat.clone();
         mat.convertTo(image32S, CvType.CV_32SC1);
@@ -233,81 +335,4 @@ public class OpenCv {
         return groupedContours;
     }
 
-}
-
-*/
-import org.opencv.core.Core;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-import org.opencv.core.Size;
-import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
-
-public class OpenCv {
-
-    static {
-        // Load the OpenCV native library
-        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-    }
-
-    public static Mat preprocessImage(String imagePath) {
-        // Read the image
-        Mat image = Imgcodecs.imread(imagePath);
-
-        // Convert to grayscale
-        Mat gray = new Mat();
-        Imgproc.cvtColor(image, gray, Imgproc.COLOR_BGR2GRAY);
-
-        // Apply Gaussian blur to remove noise
-        Mat blur = new Mat();
-        Imgproc.GaussianBlur(gray, blur, new Size(5, 5), 0);
-
-        // Adaptive thresholding
-        Mat thresh = new Mat();
-        Imgproc.adaptiveThreshold(blur, thresh, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C,
-                Imgproc.THRESH_BINARY_INV, 11, 2);
-
-        // Morphological operation to close gaps between letters
-        Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3, 3));
-        Mat closing = new Mat();
-        Imgproc.morphologyEx(thresh, closing, Imgproc.MORPH_CLOSE, kernel);
-
-        // Dilation to strengthen the characters
-        Mat dilated = new Mat();
-        Imgproc.dilate(closing, dilated, kernel);
-
-        return dilated;
-    }
-
-    public static void main(String[] args) {
-
-        // Now you can use `preprocessedImage` with Tesseract OCR
-
-        String folderPath = "AutoInsight/src/Images";
-        File Folder = new File(folderPath);
-        String outputPath = "AutoInsight/src/Output_Images";
-        FilenameFilter imageFilter = new FilenameFilter() {
-            public boolean accept(File dir, String name) {
-                // You can modify this condition to match your desired image file extensions
-                return name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".jpeg");
-            }
-        };
-        //store files to File Array
-        File[] imageFiles = Folder.listFiles(imageFilter);
-
-        int counter = 0; // keep File Count
-        while( counter < imageFiles.length ) {
-            String imageFile = imageFiles[counter].getAbsolutePath();
-            //Process with tesseract
-            Mat image = preprocessImage(imageFile);
-            //Save File to Output Folder
-            Imgcodecs.imwrite(STR."AutoInsight/src/Output_Images/Preprocessed_Image \{counter} .jpg", image);
-            System.out.println(STR."Processed image saved as Preprocessed_Image \{counter} .jpg");
-            counter++;
-        }
-
-        // Save the processed image to file
-
-
-    }
 }
