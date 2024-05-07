@@ -231,5 +231,6 @@
         <SOURCES />
       </library>
     </orderEntry>
+    <orderEntry type="library" name="cedarsoft.commons.swing.jgoodies" level="project" />
   </component>
 </module>

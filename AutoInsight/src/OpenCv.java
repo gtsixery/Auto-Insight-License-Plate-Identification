@@ -4,21 +4,121 @@ import org.opencv.highgui.HighGui;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 
 //references
 //https://docs.gimp.org/2.6/en/gimp-tool-desaturate.html
 
-public class OpenCv {
+public class OpenCv extends JFrame {
+
+    private JPanel panel1;
+    private JButton uploadImg;
+    private JButton getVehInfo;
+    private JPanel imagePanel;
+    private JPanel vehInfo;
+    private JLabel image;
+    private JTextArea CarInfo;
+
+
+    public OpenCv() {
+
+        uploadImg.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JFileChooser upload = new JFileChooser();
+                int returnVal = upload.showOpenDialog(OpenCv.this);
+
+                if (returnVal == JFileChooser.APPROVE_OPTION) {
+                    File file = new File(upload.getSelectedFile().getAbsolutePath());
+                    String path = file.getAbsolutePath();
+                    BufferedImage myPicture = null;
+                    try {
+                        myPicture = ImageIO.read(new File(path));
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
+
+                    int imageWidth = myPicture.getWidth();
+                    int imageHeight = myPicture.getHeight();
+                    int panelWidth = imagePanel.getWidth();
+                    int panelHeight = imagePanel.getHeight();
+
+                    // Determine the minimum scale factor
+                    double widthScaleFactor = (double) panelWidth / imageWidth;
+                    double heightScaleFactor = (double) panelHeight / imageHeight;
+                    double scaleFactor = Math.min(widthScaleFactor, heightScaleFactor);
+
+                    // Set a minimum scale factor to prevent the image from shrinking too much
+                    final double minScaleFactor = 0.17;
+                    if (scaleFactor < minScaleFactor) {
+                        scaleFactor = minScaleFactor;
+                    }
+
+                    // Calculate the new width and height
+                    int newWidth = (int) (imageWidth * scaleFactor);
+                    int newHeight = (int) (imageHeight * scaleFactor);
+
+                    // Create a new scaled BufferedImage
+                    BufferedImage scaledImage = new BufferedImage(newWidth, newHeight, myPicture.getType());
+                    Graphics2D g2d = scaledImage.createGraphics();
+                    //Set high-quality rendering hints
+                    g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+                    g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                    g2d.drawImage(myPicture, 0, 0, newWidth, newHeight, null);
+                    g2d.dispose();
+
+                    // Display the scaled image on the panel
+                    image = new JLabel(new ImageIcon(scaledImage));
+                    imagePanel.setLayout(new BorderLayout());
+                    imagePanel.removeAll();
+                    imagePanel.add(image, BorderLayout.CENTER);
+                    imagePanel.revalidate();
+                    imagePanel.repaint();
+                }
+
+            }
+        });
+
+        getVehInfo.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String plate = "Null";
+                CarData data = new CarData("NY", "KKY3902");
+                CarInfo.append("Vehicle Info  \n");
+                CarInfo.append("Year: " + data.Year + "\n");
+                CarInfo.append("Make: " + data.Make + "\n");
+                CarInfo.append("Model: " + data.Model + "\n");
+                CarInfo.append("Trim: " + data.Trim + "\n");
+                CarInfo.append("Body Type: " + data.BodyType + "\n");
+                CarInfo.append("Transmission: " + data.Transmission + "\n");
+
+
+                //Data = this.Year+" "+this.Make+" "+this.Model+" "+this.Trim+" "+this.BodyType+" "+this.Transmission;
+            }
+        });
+    }
+
+    public JPanel getPanel() {
+        return this.panel1;
+    }
 
 
     public static void main(String[] args) {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\BYE-NOW-3816943373.jpg");
-        Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\trucktest.jpg");
+        Mat image = Imgcodecs.imread("AutoInsight/src/Images/test1.png");
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\test4.jpg");
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\vfec56pp6rf51-1386706553.jpg");
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\maxresdefault-1911473101.jpg");
@@ -29,6 +129,9 @@ public class OpenCv {
         Mat gray = processImage(image);
         HighGui.imshow("processed", gray);
         HighGui.waitKey();
+
+
+
     }
 
     public static Mat convertGrayScale(final Mat img) {
@@ -135,7 +238,7 @@ public class OpenCv {
 
         //find edges
         Mat edgeimg = new Mat(mat.height(), mat.width(), mat.type());
-        Imgproc.Canny(grayscaleimg, edgeimg, 265, 45);
+        Imgproc.Canny(grayscaleimg, edgeimg, 265, 280);
 
 
         //find rectangles
