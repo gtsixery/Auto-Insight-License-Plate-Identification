@@ -20,7 +20,6 @@ import java.util.List;
 //https://docs.gimp.org/2.6/en/gimp-tool-desaturate.html
 
 public class OpenCv extends JFrame {
-
     private JPanel panel1;
     private JButton uploadImg;
     private JButton getVehInfo;
@@ -28,7 +27,7 @@ public class OpenCv extends JFrame {
     private JPanel vehInfo;
     private JLabel image;
     private JTextArea CarInfo;
-
+    static String CarPlateText;
 
     public OpenCv() {
 
@@ -95,7 +94,7 @@ public class OpenCv extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String plate = "Null";
-                CarData data = new CarData("NY", "KKY3902");
+                CarData data = new CarData("NY", CarPlateText);
                 CarInfo.append("Vehicle Info  \n");
                 CarInfo.append("Year: " + data.Year + "\n");
                 CarInfo.append("Make: " + data.Make + "\n");
@@ -114,12 +113,11 @@ public class OpenCv extends JFrame {
         return this.panel1;
     }
 
-
     public static void main(String[] args) {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\BYE-NOW-3816943373.jpg");
-        Mat image = Imgcodecs.imread("AutoInsight/src/Images/test1.png");
-        //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\test4.jpg");
+        Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\trucktest.jpg");
+        //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\IMG_4033.jpg");
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\vfec56pp6rf51-1386706553.jpg");
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\maxresdefault-1911473101.jpg");
         //Mat image = Imgcodecs.imread("F:\\College\\csc474\\Images\\CameraPlate.jpg");
@@ -127,11 +125,15 @@ public class OpenCv extends JFrame {
 
         HighGui.imshow("og", image);
         Mat gray = processImage(image);
+        Imgcodecs.imwrite("./TessTest.png", gray);
         HighGui.imshow("processed", gray);
+
+        //do OCR
+        TesseractOCR Tesseract = new TesseractOCR(gray);
+        CarPlateText = Tesseract.DoOCR();
+        System.out.println("Resullt: "+CarPlateText);
+
         HighGui.waitKey();
-
-
-
     }
 
     public static Mat convertGrayScale(final Mat img) {
@@ -196,7 +198,7 @@ public class OpenCv extends JFrame {
             }
         }
 
-        //normalize kernel
+        //normalize kernal
         for(int i = 0; i < size; i++) {
             for(int j = 0; j < size; j++) {
                 kernel[i][j] /= sum;
@@ -227,18 +229,19 @@ public class OpenCv extends JFrame {
         Mat processedImg = new Mat(mat.height(), mat.width(), mat.type());
         //blur
         Mat blurimg = GaussianBlur(mat, 5, 1.5);
-        //HighGui.imshow("blurred", blurimg);
+        HighGui.imshow("blurred", blurimg);
 
         //convert to grayscale
         Mat grayscaleimg = convertGrayScale(blurimg);
-        //HighGui.imshow("grayscale", grayscaleimg);
+        HighGui.imshow("grayscale", grayscaleimg);
 
         //apply thresholding
         //Imgproc.threshold(processedImg, processedImg, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
 
         //find edges
         Mat edgeimg = new Mat(mat.height(), mat.width(), mat.type());
-        Imgproc.Canny(grayscaleimg, edgeimg, 265, 280);
+        Imgproc.Canny(grayscaleimg, edgeimg, 265, 45);
+        HighGui.imshow("edge Image", edgeimg);
 
 
         //find rectangles
